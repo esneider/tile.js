@@ -2,7 +2,7 @@
 
 var Tile = (function() {
 
-    "use strict";
+    'use strict';
 
     /**
      * Create a new tile with the given coordinates.
@@ -13,7 +13,7 @@ var Tile = (function() {
      * - Google: {@link http://bit.ly/18xaPQy}
      * - TMS:    {@link http://bit.ly/17IFF5X}
      *
-     * WMTS and Google are the same. TMS differs in where the 0 for the y
+     * WMTS and Google are the same. TMS differs just in where the 0 for the y
      * coordinate is.
      *
      * @param {number} x
@@ -97,6 +97,19 @@ var Tile = (function() {
         throw new Error('Invalid url');
     };
 
+    /**
+     * Create a new tile corresponding to a Microsoft QuadTree tile:
+     * {@link http://bit.ly/56kDpD}
+     *
+     * @param {string} key  Base-4 number.
+     * @returns {Tile} New tile.
+     * @throws {Error} Invalid tile path.
+     */
+    Tile.fromQuadKey = function(key) {
+
+        return new Tile(0, 0, 0).lower(key);
+    };
+
     var equatorialRadius = 6378137;
     var minLatitude = -85.05112878;
     var maxLatitude = 85.05112878;
@@ -148,32 +161,58 @@ var Tile = (function() {
      * @param {number} levels  How many zoom levels above should it be.
      * @return {Tile} New tile.
      */
-    Tile.prototype.upper = function(levels) {
+    Tile.prototype.higher = function(levels) {
 
         levels = levels || 1;
 
-        var factor = 1 << levels;
-
-        return new Tile(this.x / factor, this.y / factor, this.z - levels);
+        return new Tile(this.x >> levels, this.y >> levels, this.z - levels);
     };
 
-    /*  -------
-       | 0 | 1 |
-       |---+---|
-       | 2 | 3 |
-        -------  */
-    Tile.prototype.lower = function(n) {
+    /**
+     * Return a tile contained by this one. For each further zoom level, we can
+     * choose between 4 tiles, numbered as follows:
+     *
+     *  -------
+     * | 0 | 1 |
+     * |---+---|
+     * | 2 | 3 |
+     *  -------
+     *
+     *  Thus, the path to a tile is the concatenation of the numbers
+     *  representing this choices.
+     *
+     *  @param {string} path  Base-4 number.
+     *  @returns {Tile} New tile.
+     *  @throws {Error} Invalid tile path.
+     */
+    Tile.prototype.lower = function(path) {
 
-        n = n || 0;
+        path = path || '0';
 
-        return new Tile(this.x * 2 + (n & 1), this.y + (n > 1), this.z + 1);
+        var x = this.x;
+        var y = this.y;
+
+        for (var i = 0; i < path.length; i++) {
+
+            x <<= 1;
+            y <<= 1;
+
+            switch (path.charAt(i)) {
+                case '0': break;
+                case '1': x++; break;
+                case '2': y++; break;
+                case '3': x++; y++; break;
+                default:
+                    throw new Error('Invalid tile path');
+            }
+        }
+
+        return new Tile(x, y, this.z + path.length);
     };
 
-    /* 0 ----- 1
-       |   |   |
-       |-- 4 --|
-       |   |   |
-       2 ----- 3 */
+    /* 0 - 1
+       | 4 |
+       2 - 3 */
     Tile.prototype.toLatLon = function(n) {
 
         n = n || 4;
