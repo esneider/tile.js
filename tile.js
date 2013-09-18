@@ -4,6 +4,17 @@ var Tile = (function() {
 
     'use strict';
 
+    var slashPattern = /\/(\d+)\/(\d+)\/(\d+)/;
+    var paramPattern = /([xyz])=(\d+)&([xyz])=(\d+)&([xyz])=(\d+)/i;
+    var replacePattern = /%%(x|y|z)%%/gi;
+
+    var minLatitude = -85.05112878;
+    var maxLatitude = 85.05112878;
+    var minLongitude = -180;
+    var maxLongitude = 180;
+    var equatorialRadius = 6378137;
+    var semiperimeter = Math.PI * equatorialRadius;
+
     /**
      * Create a new tile with the given coordinates.
      * A tile is determined by the coordinates x, y and the zoom level z.
@@ -18,7 +29,7 @@ var Tile = (function() {
      *
      * @param {number} x
      * @param {number} y
-     * @param {number} z Zoom level.
+     * @param {number} z     Zoom level.
      * @param {string} type  Can be 'wmts', 'google' or 'tms'.
      *
      * @constructor
@@ -40,10 +51,12 @@ var Tile = (function() {
      * Create a new tile from string parameters.
      *
      * @see Tile
+     *
      * @param {string} x
      * @param {string} y
-     * @param {string} z  Zoom level.
+     * @param {string} z     Zoom level.
      * @param {string} type  Can be 'wmts', 'google' or 'tms'.
+     *
      * @returns {Tile} New tile.
      */
     function tileFromStrings(x, y, z, type) {
@@ -55,15 +68,13 @@ var Tile = (function() {
         return new Tile(x, y, z, type);
     }
 
-    var slashPattern = /\/(\d+)\/(\d+)\/(\d+)/;
-    var paramPattern = /([xyz])=(\d+)&([xyz])=(\d+)&([xyz])=(\d+)/i;
-
     /**
      * Create a new tile from a tile url.
      * The url information won't be stored, just the coordinates.
      *
-     * @param {string} url  Url for the tile.
+     * @param {string} url   Url for the tile.
      * @param {string} type  Can be 'wmts', 'google' or 'tms'.
+     *
      * @returns {Tile} New tile.
      * @throws {Error} Invalid url.
      */
@@ -102,6 +113,7 @@ var Tile = (function() {
      * {@link http://bit.ly/56kDpD}
      *
      * @param {string} key  Base-4 number.
+     *
      * @returns {Tile} New tile.
      * @throws {Error} Invalid tile path.
      */
@@ -110,30 +122,49 @@ var Tile = (function() {
         return new Tile(0, 0, 0).lower(key);
     };
 
-    var equatorialRadius = 6378137;
-    var minLatitude = -85.05112878;
-    var maxLatitude = 85.05112878;
-    var minLongitude = -180;
-    var maxLongitude = 180;
-    var semiperimeter = Math.PI * equatorialRadius;
+    /**
+     * Trim a number if it is outside a given range.
+     *
+     * @param {number} n
+     * @param {number} min
+     * @param {number} max
+     *
+     * @returns {number} Trimmed number.
+     */
+    function trim(n, min, max) {
+
+        return n < min ? min : (n > max ? max : n);
+    }
 
     /**
-     * Create a new tile from geodetic coordinates (latitude, longitude). The
-     * geodetic coordinates are expected to use the WGS84 datum.
+     * Create a new tile from geodetic coordinates (latitude and longitude in
+     * degrees). The geodetic coordinates are expected to use the WGS84 datum.
      *
      * @param {number} lat  Latitude.
      * @param {number} lon  Longitude.
-     * @param {number} z  Zoom level.
+     * @param {number} z    Zoom level.
+     *
      * @returns {Tile} New tile.
      */
     Tile.fromLatLon = function(lat, lon, z) {
 
-        // TODO
+        lat = trim(lat, minLatitude, maxLatitude);
+        lon = trim(lon, minLongitude, maxLongitude);
 
-        return lat * lon * z * semiperimeter * minLatitude * minLongitude * maxLatitude * maxLongitude;
+        var x = lon / 360 + 0.5;
+        var sinLat = Math.sin(lat * Math.PI / 180);
+        var y = 0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI);
+
+        x = ~~trim((x << z) + 1.5, 1, 1 << z) - 1;
+        y = ~~trim((x << z) + 1.5, 1, 1 << z) - 1;
+
+        return new Tile(x, y, z);
     };
 
-    var replacePattern = /%%(x|y|z)%%/gi;
+    Tile.fromPixel = function(x, y, z) {
+
+        // TODO
+    };
 
     /**
      * Generate the url for the tile from a url pattern.
@@ -143,6 +174,7 @@ var Tile = (function() {
      * %%X%%, %%Y%%, %%Z%%
      *
      * @param {string} pattern
+     *
      * @returns {string} Url.
      */
     Tile.prototype.toUrl = function(pattern) {
@@ -156,9 +188,10 @@ var Tile = (function() {
     };
 
     /**
-     * Return a tile containing this one.
+     * Return a tile containing this one (lower zoom level).
      *
      * @param {number} levels  How many zoom levels above should it be.
+     *
      * @return {Tile} New tile.
      */
     Tile.prototype.higher = function(levels) {
@@ -169,8 +202,8 @@ var Tile = (function() {
     };
 
     /**
-     * Return a tile contained by this one. For each further zoom level, we can
-     * choose between 4 tiles, numbered as follows:
+     * Return a tile contained by this one (higher zoom level). For each
+     * further zoom level, we can choose between 4 tiles, numbered as follows:
      *
      *  -------
      * | 0 | 1 |
@@ -182,6 +215,7 @@ var Tile = (function() {
      *  representing this choices.
      *
      *  @param {string} path  Base-4 number.
+     *
      *  @returns {Tile} New tile.
      *  @throws {Error} Invalid tile path.
      */
@@ -210,12 +244,15 @@ var Tile = (function() {
         return new Tile(x, y, this.z + path.length);
     };
 
-    /* 0 - 1
-       | 4 |
-       2 - 3 */
-    Tile.prototype.toLatLon = function(n) {
-
-        n = n || 4;
+    /**
+     * Return the geodetic coordinates corresponding to a given tile pixel.
+     *
+     * @param {number} x  Tile pixel x coordinate, between 0 and 255.
+     * @param {number} y  Tile pixel y coordinate, between 0 and 255.
+     *
+     * @returns {object} Object with lat and lon fields.
+     */
+    Tile.prototype.toLatLon = function(x, y) {
 
         // TODO
     };
