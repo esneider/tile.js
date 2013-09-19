@@ -15,8 +15,21 @@ var Tile = (function() {
     var equatorialRadius = 6378137;
     var semiperimeter = Math.PI * equatorialRadius;
 
-    var xmlHttp = null;
+    var xhr = null;
     var xmlCallback = null;
+
+    /**
+     * Switch between TMS and WMTS y coordinates.
+     *
+     * @see Tile
+     * @param {number} y  Coordinate.
+     * @param {number} z  Zoom level.
+     * @return {number} New y coordinate.
+     */
+    function switchTms(y, z) {
+
+        return (1 << z) - y - 1;
+    }
 
     /**
      * Create a new tile with the given coordinates.
@@ -30,36 +43,29 @@ var Tile = (function() {
      * WMTS and Google are the same. TMS differs just in where the 0 for the y
      * coordinate is.
      *
-     * @param {number} x
-     * @param {number} y
-     * @param {number} z     Zoom level.
-     * @param {string} type  Can be 'wmts', 'google' or 'tms'.
-     *
      * @constructor
+     * @param {number} x  Coordinate.
+     * @param {number} y  Coordinate.
+     * @param {number} z  Zoom level.
+     * @param {string} [type='wmts']  Can be 'wmts', 'google' or 'tms'.
      */
     var Tile = function(x, y, z, type) {
-
-        type = type || 'wmts';
 
         this.x = x;
         this.y = y;
         this.z = z;
 
-        if (type === 'tms') {
-            this.y = ((1 << z) - 1) - y;
-        }
+        if (type === 'tms') { this.y = switchTms(y, z); }
     };
 
     /**
      * Create a new tile from string parameters.
      *
      * @see Tile
-     *
-     * @param {string} x
-     * @param {string} y
-     * @param {string} z     Zoom level.
-     * @param {string} type  Can be 'wmts', 'google' or 'tms'.
-     *
+     * @param {string} x  Coordinate.
+     * @param {string} y  Coordinate.
+     * @param {string} z  Zoom level.
+     * @param {string} [type='wmts']  Can be 'wmts', 'google' or 'tms'.
      * @returns {Tile} New tile.
      */
     function tileFromStrings(x, y, z, type) {
@@ -72,18 +78,17 @@ var Tile = (function() {
     }
 
     /**
-     * Create a new tile from a tile url.
-     * The url information won't be stored, just the coordinates.
+     * Create a new tile from a tile url. The url information won't be stored,
+     * just the coordinates.
      *
-     * @param {string} url   Url for the tile.
-     * @param {string} type  Can be 'wmts', 'google' or 'tms'.
-     *
+     * @param {string} url  Url for the tile.
+     * @param {string} [type='wmts']  Can be 'wmts', 'google' or 'tms'.
      * @returns {Tile} New tile.
      * @throws {Error} Invalid url.
      */
     Tile.fromUrl = function(url, type) {
 
-        type = type || this.coordType;
+        type = type || this.coordinateType;
 
         var res = slashPattern.exec(url);
 
@@ -112,11 +117,9 @@ var Tile = (function() {
     };
 
     /**
-     * Create a new tile corresponding to a Microsoft QuadTree tile:
-     * {@link http://bit.ly/56kDpD}
+     * Create a new tile from a Microsoft QuadKey: {@link http://bit.ly/56kDpD}
      *
      * @param {string} key  Base-4 number.
-     *
      * @returns {Tile} New tile.
      * @throws {Error} Invalid tile path.
      */
@@ -126,7 +129,7 @@ var Tile = (function() {
     };
 
     /**
-     * Trim a number if it is outside a given range.
+     * Trim a number if it's outside a given range.
      *
      * @param {number} n
      * @param {number} min
@@ -176,15 +179,15 @@ var Tile = (function() {
      *
      * %%X%%, %%Y%%, %%Z%%
      *
-     * @param {string} pattern
+     * @param {string} urlPattern
      *
      * @returns {string} Url.
      */
-    Tile.prototype.toUrl = function(pattern) {
+    Tile.prototype.toUrl = function(urlPattern) {
 
-        pattern = pattern || this.urlPattern;
+        urlPattern = urlPattern || this.urlPattern;
 
-        return pattern.replace(replacePattern, function(match, par) {
+        return urlPattern.replace(replacePattern, function(match, par) {
 
             return this[par.toLowerCase()];
         });
@@ -263,13 +266,16 @@ var Tile = (function() {
     /**
      *
      */
-    Tile.prototype.get = function(callback, url, type, retries) {
+    Tile.prototype.get = function(urlPattern, callback, opts) {
 
-        if (xmlHttp !== null && xmlHttp.readyState < 4) {
+        if (!('retries' in opts)) { opts.retries = 3; }
+        if (!('timeout' in opts)) { opts.timeout = 3000; }
 
-            xmlCallback = function(res) {
-                xmlCallback(res);
-                callback(res);
+        if (xhr !== null && xhr.readyState < 4) {
+
+            xmlCallback = function() {
+                xmlCallback.apply(arguments);
+                callback.apply(arguments);
             };
 
             return;
@@ -277,16 +283,16 @@ var Tile = (function() {
 
         xmlCallback = callback;
 
-        xmlHttp = new XMLHttpRequest();
+        xhr = new XMLHttpRequest();
 
-        xmlHttp.onreadystatechange = function() {
+        xhr.onreadystatechange = function() {
 
-            if (xmlHttp.readyState === 4) {
+            if (xhr.readyState === 4) {
 
-                switch (~~(xmlHttp.status / 100)) {
+                switch (~~(xhr.status / 100)) {
                     case 1:
                     case 2:
-                        xmlCallback(xmlHttp.response);
+                        xmlCallback(xhr.response);
                         break;
                     case 3:
                     case 4:
@@ -294,7 +300,7 @@ var Tile = (function() {
                         break;
                     default:
                         if (retries) {
-                            this.get(xmlCallback, url, type, retries - 1);
+                            this.get(xmlCallback, urlPattern, type, retries - 1);
                         } else {
                             xmlCallback(null);
                         }
@@ -303,15 +309,15 @@ var Tile = (function() {
             }
         };
 
-        xmlHttp.open('GET', this.toUrl(url, type), true);
-        xmlHttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xmlHttp.send(null);
+        xhr.open('GET', this.toUrl(urlPattern, type), true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(null);
     };
 
     Tile.prototype.abort = function() {
 
-        if (xmlHttp) {
-            xmlHttp.abort();
+        if (xhr) {
+            xhr.abort();
         }
     };
 
