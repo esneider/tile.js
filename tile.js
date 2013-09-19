@@ -15,6 +15,9 @@ var Tile = (function() {
     var equatorialRadius = 6378137;
     var semiperimeter = Math.PI * equatorialRadius;
 
+    var xmlHttp = null;
+    var xmlCallback = null;
+
     /**
      * Create a new tile with the given coordinates.
      * A tile is determined by the coordinates x, y and the zoom level z.
@@ -181,7 +184,7 @@ var Tile = (function() {
 
         pattern = pattern || this.urlPattern;
 
-        pattern.replace(replacePattern, function(match, par) {
+        return pattern.replace(replacePattern, function(match, par) {
 
             return this[par.toLowerCase()];
         });
@@ -255,6 +258,61 @@ var Tile = (function() {
     Tile.prototype.toLatLon = function(x, y) {
 
         // TODO
+    };
+
+    /**
+     *
+     */
+    Tile.prototype.get = function(callback, url, type, retries) {
+
+        if (xmlHttp !== null && xmlHttp.readyState < 4) {
+
+            xmlCallback = function(res) {
+                xmlCallback(res);
+                callback(res);
+            };
+
+            return;
+        }
+
+        xmlCallback = callback;
+
+        xmlHttp = new XMLHttpRequest();
+
+        xmlHttp.onreadystatechange = function() {
+
+            if (xmlHttp.readyState === 4) {
+
+                switch (~~(xmlHttp.status / 100)) {
+                    case 1:
+                    case 2:
+                        xmlCallback(xmlHttp.response);
+                        break;
+                    case 3:
+                    case 4:
+                        xmlCallback(null);
+                        break;
+                    default:
+                        if (retries) {
+                            this.get(xmlCallback, url, type, retries - 1);
+                        } else {
+                            xmlCallback(null);
+                        }
+                        break;
+                }
+            }
+        };
+
+        xmlHttp.open('GET', this.toUrl(url, type), true);
+        xmlHttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xmlHttp.send(null);
+    };
+
+    Tile.prototype.abort = function() {
+
+        if (xmlHttp) {
+            xmlHttp.abort();
+        }
     };
 
     return Tile;
