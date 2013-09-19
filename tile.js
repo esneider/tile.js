@@ -131,10 +131,9 @@ var Tile = (function() {
     /**
      * Trim a number if it's outside a given range.
      *
-     * @param {number} n
-     * @param {number} min
-     * @param {number} max
-     *
+     * @param {number} n  Number to trim.
+     * @param {number} min  Minimum posible value, included.
+     * @param {number} max  Maximum posible value, included.
      * @returns {number} Trimmed number.
      */
     function trim(n, min, max) {
@@ -148,8 +147,7 @@ var Tile = (function() {
      *
      * @param {number} lat  Latitude.
      * @param {number} lon  Longitude.
-     * @param {number} z    Zoom level.
-     *
+     * @param {number} z  Zoom level.
      * @returns {Tile} New tile.
      */
     Tile.fromLatLon = function(lat, lon, z) {
@@ -167,20 +165,27 @@ var Tile = (function() {
         return new Tile(x, y, z);
     };
 
+    /**
+     * Create a new tile from zoom plane coordinates (in pixels).
+     *
+     * @param {number} x  Coordinate.
+     * @param {number} y  Coordinate.
+     * @param {number} z  Zoom level.
+     * @returns {Tile} New tile.
+     */
     Tile.fromPixel = function(x, y, z) {
 
-        // TODO
+        return new Tile(x >> (z - 8), y >> (z - 8), z);
     };
 
     /**
-     * Generate the url for the tile from a url pattern.
-     * The pattern can have one or more of the following markers, which will be
-     * replaced by the appropriate value:
+     * Generate the url for the tile from a url pattern. The pattern can have
+     * one or more of the following markers, which will be replaced by the
+     * appropriate value:
      *
      * %%X%%, %%Y%%, %%Z%%
      *
      * @param {string} urlPattern
-     *
      * @returns {string} Url.
      */
     Tile.prototype.toUrl = function(urlPattern) {
