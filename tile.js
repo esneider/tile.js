@@ -51,11 +51,13 @@ var Tile = (function() {
      */
     var Tile = function(x, y, z, type) {
 
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        x = x || 0;
+        y = y || 0;
+        z = z || 0;
 
-        if (type === 'tms') { this.y = switchTms(y, z); }
+        this.x = x;
+        this.y = type !== 'tms' ? y : switchTms(y, z);
+        this.z = z;
     };
 
     /**
@@ -94,7 +96,7 @@ var Tile = (function() {
 
         if (res !== null) {
 
-            return tileFromStrings(res[1], res[2], res[3], type);
+            return tileFromStrings(res[2], res[3], res[1], type);
         }
 
         res = paramPattern.exec(url);
@@ -202,7 +204,6 @@ var Tile = (function() {
      * Return a tile containing this one (lower zoom level).
      *
      * @param {number} levels  How many zoom levels above should it be.
-     *
      * @return {Tile} New tile.
      */
     Tile.prototype.higher = function(levels) {
@@ -226,7 +227,6 @@ var Tile = (function() {
      *  representing this choices.
      *
      *  @param {string} path  Base-4 number.
-     *
      *  @returns {Tile} New tile.
      *  @throws {Error} Invalid tile path.
      */
@@ -260,7 +260,6 @@ var Tile = (function() {
      *
      * @param {number} x  Tile pixel x coordinate, between 0 and 255.
      * @param {number} y  Tile pixel y coordinate, between 0 and 255.
-     *
      * @returns {object} Object with lat and lon fields.
      */
     Tile.prototype.toLatLon = function(x, y) {
@@ -271,7 +270,7 @@ var Tile = (function() {
     /**
      *
      */
-    Tile.prototype.get = function(urlPattern, callback, opts) {
+    Tile.prototype.fetch = function(urlPattern, callback, opts) {
 
         if (!('retries' in opts)) { opts.retries = 3; }
         if (!('timeout' in opts)) { opts.timeout = 3000; }
@@ -319,6 +318,9 @@ var Tile = (function() {
         xhr.send(null);
     };
 
+    /**
+     *
+     */
     Tile.prototype.abort = function() {
 
         if (xhr) {
