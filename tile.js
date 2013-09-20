@@ -51,13 +51,13 @@ var Tile = (function() {
      */
     var Tile = function(x, y, z, type) {
 
-        x = x || 0;
-        y = y || 0;
-        z = z || 0;
+        this.x = x || 0;
+        this.y = y || 0;
+        this.z = z || 0;
 
-        this.x = x;
-        this.y = type !== 'tms' ? y : switchTms(y, z);
-        this.z = z;
+        if (type === 'tms') {
+            this.y = switchTms(this.y, this.z);
+        }
     };
 
     /**
