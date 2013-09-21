@@ -6,7 +6,8 @@ var Tile = (function() {
 
     var slashPattern = /\/(\d+)\/(\d+)\/(\d+)/;
     var paramPattern = /([xyz])=(\d+)&([xyz])=(\d+)&([xyz])=(\d+)/i;
-    var replacePattern = /%%(x|y|z)%%/gi;
+    var genericPattern = /(\d+)([^\d])(\d+)\2(\d+)/;
+    var replacePattern = /%%(p|x|y|z)%%/gi;
 
     var minLatitude = -85.05112878;
     var maxLatitude = 85.05112878;
@@ -115,6 +116,13 @@ var Tile = (function() {
             }
         }
 
+        res = genericPattern.exec(url);
+
+        if (res !== null) {
+
+            return tileFromStrings(res[3], res[4], res[1], type);
+        }
+
         throw new Error('Invalid url');
     };
 
@@ -134,8 +142,8 @@ var Tile = (function() {
      * Trim a number if it's outside a given range.
      *
      * @param {number} n  Number to trim.
-     * @param {number} min  Minimum posible value, included.
-     * @param {number} max  Maximum posible value, included.
+     * @param {number} min  Minimum possible value, included.
+     * @param {number} max  Maximum possible value, included.
      * @returns {number} Trimmed number.
      */
     function trim(n, min, max) {
@@ -190,13 +198,19 @@ var Tile = (function() {
      * @param {string} urlPattern
      * @returns {string} Url.
      */
-    Tile.prototype.toUrl = function(urlPattern) {
+    Tile.prototype.toUrl = function(urlPattern, urlPrefixes) {
 
-        urlPattern = urlPattern || this.urlPattern;
+        urlPattern  = urlPattern  || this.urlPattern;
+        urlPrefixes = urlPrefixes || this.urlPrefixes;
 
         return urlPattern.replace(replacePattern, function(match, par) {
 
-            return this[par.toLowerCase()];
+            switch (par.toLowerCase()) {
+                case 'x': return this.x;
+                case 'y': return this.y;
+                case 'z': return this.z;
+                case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
+            }
         });
     };
 
