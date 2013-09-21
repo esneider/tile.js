@@ -6,7 +6,7 @@ var Tile = (function() {
 
     var slashPattern = /\/(\d+)\/(\d+)\/(\d+)/;
     var paramPattern = /([xyz])=(\d+)&([xyz])=(\d+)&([xyz])=(\d+)/i;
-    var genericPattern = /(\d+)([^\d])(\d+)\2(\d+)/;
+    var genericPattern = /(\d+)([^A-Za-z0-9])(\d+)\2(\d+)/;
     var replacePattern = /%%(p|x|y|z)%%/gi;
 
     var minLatitude = -85.05112878;

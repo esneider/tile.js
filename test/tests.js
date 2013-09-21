@@ -49,10 +49,28 @@ test('URL constructor', function() {
     throws(f, 'Invalid url (empty)');
     f = function() { Tile.fromUrl('http://www.google.com/'); };
     throws(f, 'Invalid url (non-numeric)');
-    f = function() { Tile.fromUrl('http://www.google.com/search?aqs=chrome..69i57j69i60l3j69i65l2.699j0'); };
+    f = function() { Tile.fromUrl('http://www.google.com/search?aqs=69i57j69i60l3j69i65l2.699j0'); };
     throws(f, 'Invalid url (numeric)');
 
     t = Tile.fromUrl('http://mw1.google.com/mw-planetary/lunar/lunarmaps_v1/clem_bw/9/321/121.jpg', 'tms');
     deepEqual(t, new Tile(321, (1 << 9) - 122, 9), 'TMS type');
 });
 
+test('QuadKey constructor', function() {
+
+    var t, f;
+
+    t = Tile.fromQuadKey('02301020333');
+    deepEqual(t, new Tile(327, 791, 11), 'Initialization');
+
+    f = function() { Tile.fromQuadKey('2131234'); };
+    throws(f, 'Invalid tile path');
+    f = function() { Tile.fromQuadKey('213123a'); };
+    throws(f, 'Invalid tile path');
+    f = function() { Tile.fromQuadKey('213123@'); };
+    throws(f, 'Invalid tile path');
+});
+
+test('LatLon constructor', function() {
+
+});
