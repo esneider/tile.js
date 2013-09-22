@@ -7,7 +7,7 @@ var Tile = (function() {
     var slashPattern = /\/(\d+)\/(\d+)\/(\d+)/;
     var paramPattern = /([xyz])=(\d+)&([xyz])=(\d+)&([xyz])=(\d+)/i;
     var genericPattern = /(\d+)([^A-Za-z0-9])(\d+)\2(\d+)/;
-    var replacePattern = /%%(p|x|y|z)%%/gi;
+    var replacePattern = /{{(p|x|y|z)}}/gi;
 
     var minLatitude = -85.05112878;
     var maxLatitude = 85.05112878;
@@ -56,6 +56,8 @@ var Tile = (function() {
         this.y = y || 0;
         this.z = z || 0;
 
+        type = type || this.coordType;
+
         if (type === 'tms') {
             this.y = switchTms(this.y, this.z);
         }
@@ -90,8 +92,6 @@ var Tile = (function() {
      * @throws {Error} Invalid url.
      */
     Tile.fromUrl = function(url, type) {
-
-        type = type || this.coordinateType;
 
         var res = slashPattern.exec(url);
 
@@ -135,7 +135,7 @@ var Tile = (function() {
      */
     Tile.fromQuadKey = function(key) {
 
-        return new Tile(0, 0, 0).lower(key);
+        return new Tile(0, 0, 0).descendant(key);
     };
 
     /**
@@ -165,14 +165,16 @@ var Tile = (function() {
         lat = trim(lat, minLatitude, maxLatitude);
         lon = trim(lon, minLongitude, maxLongitude);
 
-        var x = lon / 360 + 0.5;
-        var sinLat = Math.sin(lat * Math.PI / 180);
-        var y = 0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI);
+        var x = (lon + 180) / 360;
+        var s = Math.sin(lat * Math.PI / 180);
+        var y = 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
 
-        x = ~~trim((x << z) + 1.5, 1, 1 << z) - 1;
-        y = ~~trim((x << z) + 1.5, 1, 1 << z) - 1;
+        var size = 256 << z;
 
-        return new Tile(x, y, z);
+        x = ~~trim(x * size + 0.5, 0, size - 1);
+        y = ~~trim(y * size + 0.5, 0, size - 1);
+
+        return new Tile(x >> 8, y >> 8, z);
     };
 
     /**
@@ -189,11 +191,53 @@ var Tile = (function() {
     };
 
     /**
+     * @example
+     *
+     * GoogleTile = Tile.extend({
+     *     urlPattern: 'http://mt{{p}}.google.com/vt/x={{x}}&y={{y}}&z={{z}}',
+     *     urlPrefixes: ['0','1','2','3'],
+     *     coordType: 'google'
+     * });
+     *
+     * @param {object}    opts
+     * @param {string}   [opts.urlPattern='']
+     * @param {string[]} [opts.urlPrefixes=['']]
+     * @param {string}   [opts.coordType='wmts']
+     */
+    Tile.extend = function(opts) {
+
+        var paren = this;
+
+        function Tile() { paren.apply(this, arguments); };
+
+        for (var attr in this.prototype) {
+            if (this.prototype.hasOwnProperty(attr)) {
+                Tile.prototype[attr] = this.prototype[attr];
+            }
+        }
+
+        for (var op in opts) {
+            if (opts.hasOwnProperty(op)) {
+                Tile.prototype[op] = opts[op];
+            }
+        }
+
+        return Tile;
+    };
+
+    /**
+     * Default parameters
+     */
+    Tile.prototype.coordType = 'wmts';
+    Tile.prototype.urlPrefixes = [''];
+    Tile.prototype.urlPattern = '';
+
+    /**
      * Generate the url for the tile from a url pattern. The pattern can have
      * one or more of the following markers, which will be replaced by the
      * appropriate value:
      *
-     * %%X%%, %%Y%%, %%Z%%
+     * {{X}}, {{Y}}, {{Z}}
      *
      * @param {string} urlPattern
      * @returns {string} Url.
@@ -203,12 +247,14 @@ var Tile = (function() {
         urlPattern  = urlPattern  || this.urlPattern;
         urlPrefixes = urlPrefixes || this.urlPrefixes;
 
+        var tile = this;
+
         return urlPattern.replace(replacePattern, function(match, par) {
 
             switch (par.toLowerCase()) {
-                case 'x': return this.x;
-                case 'y': return this.y;
-                case 'z': return this.z;
+                case 'x': return tile.x;
+                case 'y': return tile.y;
+                case 'z': return tile.z;
                 case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
             }
         });
@@ -217,10 +263,10 @@ var Tile = (function() {
     /**
      * Return a tile containing this one (lower zoom level).
      *
-     * @param {number} levels  How many zoom levels above should it be.
+     * @param {number} levels  How many zoom levels to traverse up.
      * @return {Tile} New tile.
      */
-    Tile.prototype.higher = function(levels) {
+    Tile.prototype.ancestor = function(levels) {
 
         levels = levels || 1;
 
@@ -244,7 +290,7 @@ var Tile = (function() {
      *  @returns {Tile} New tile.
      *  @throws {Error} Invalid tile path.
      */
-    Tile.prototype.lower = function(path) {
+    Tile.prototype.descendant = function(path) {
 
         path = path || '0';
 

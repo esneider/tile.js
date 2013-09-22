@@ -73,4 +73,8 @@ test('QuadKey constructor', function() {
 
 test('LatLon constructor', function() {
 
+    var t, f;
+
+    t = Tile.fromLatLon(37.8, -122.4, 11);
+    deepEqual(t, new Tile(327, 791, 11), 'Initialization');
 });
