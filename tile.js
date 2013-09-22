@@ -245,38 +245,6 @@ var Tile = (function() {
     Tile.prototype.urlPattern = '';
 
     /**
-     * Generate the url for the tile from a url pattern. The pattern can have
-     * one or more of the following markers, which will be replaced by the
-     * appropriate value:
-     *
-     * {{x}}, {{y}}, {{z}}, {{p}}
-     *
-     * where x and y are the coordinates, z the zoom level and p the random
-     * prefix.
-     *
-     * @param {string} urlPattern
-     * @param {string[]} urlPrefixes
-     * @returns {string} Url.
-     */
-    Tile.prototype.toUrl = function(urlPattern, urlPrefixes) {
-
-        urlPattern  = urlPattern  || this.urlPattern;
-        urlPrefixes = urlPrefixes || this.urlPrefixes;
-
-        var tile = this;
-
-        return urlPattern.replace(replacePattern, function(match, par) {
-
-            switch (par.toLowerCase()) {
-                case 'x': return tile.x;
-                case 'y': return tile.y;
-                case 'z': return tile.z;
-                case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
-            }
-        });
-    };
-
-    /**
      * Return a tile containing this one (lower zoom level).
      *
      * @param {number} levels  How many zoom levels to traverse up.
@@ -332,6 +300,49 @@ var Tile = (function() {
     };
 
     /**
+     * Generate the url for the tile from a url pattern. The pattern can have
+     * one or more of the following markers, which will be replaced by the
+     * appropriate value:
+     *
+     * {{x}}, {{y}}, {{z}}, {{p}}
+     *
+     * where x and y are the coordinates, z the zoom level and p the random
+     * prefix.
+     *
+     * @param {string} urlPattern
+     * @param {string[]} urlPrefixes
+     * @returns {string} Url.
+     */
+    Tile.prototype.toUrl = function(urlPattern, urlPrefixes) {
+
+        urlPattern  = urlPattern  || this.urlPattern;
+        urlPrefixes = urlPrefixes || this.urlPrefixes;
+
+        var tile = this;
+
+        return urlPattern.replace(replacePattern, function(match, par) {
+
+            switch (par.toLowerCase()) {
+                case 'x': return tile.x;
+                case 'y': return tile.y;
+                case 'z': return tile.z;
+                case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
+            }
+        });
+    };
+
+    /**
+     * TODO
+     */
+    Tile.prototype.toPixel = function(x, y) {
+
+        x += this.x << 8;
+        y += this.y << 8;
+
+        return {x: x, y: y};
+    };
+
+    /**
      * Return the geodetic coordinates corresponding to a given tile pixel.
      *
      * @param {number} x  Tile pixel x coordinate, between 0 and 255.
@@ -340,7 +351,15 @@ var Tile = (function() {
      */
     Tile.prototype.toLatLon = function(x, y) {
 
-        // TODO
+        var size = 256 << this.z;
+
+        x = trim(x + (this.x << 8), 0, size - 1) / size - 0.5;
+        y = 0.5 - trim(y + (this.y << 8), 0, size - 1) / size;
+
+        var lat = 90 - 360 * Math.atan(Math.exp(-y * 2 * Math.PI)) / Math.PI;
+        var lon = 360 * x;
+
+        return {lat: lat, lon: lon};
     };
 
     /**
@@ -406,4 +425,3 @@ var Tile = (function() {
 
     return Tile;
 }());
-
