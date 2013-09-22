@@ -16,6 +16,7 @@ var Tile = (function() {
     var equatorialRadius = 6378137;
     var semiperimeter = Math.PI * equatorialRadius;
 
+    var initializing = false;
     var xhr = null;
     var xmlCallback = null;
 
@@ -51,6 +52,8 @@ var Tile = (function() {
      * @param {string} [type='wmts']  Can be 'wmts', 'google' or 'tms'.
      */
     var Tile = function(x, y, z, type) {
+
+        if (initializing) { return; }
 
         this.x = x || 0;
         this.y = y || 0;
@@ -210,15 +213,19 @@ var Tile = (function() {
 
         function Tile() { paren.apply(this, arguments); };
 
+        initializing = true;
+        Tile.prototype = new this();
+        initializing = false;
+
         for (var attr in this.prototype) {
             if (this.prototype.hasOwnProperty(attr)) {
                 Tile.prototype[attr] = this.prototype[attr];
             }
         }
 
-        for (var op in opts) {
-            if (opts.hasOwnProperty(op)) {
-                Tile.prototype[op] = opts[op];
+        for (var attr in opts) {
+            if (opts.hasOwnProperty(attr)) {
+                Tile.prototype[attr] = opts[attr];
             }
         }
 
@@ -237,7 +244,10 @@ var Tile = (function() {
      * one or more of the following markers, which will be replaced by the
      * appropriate value:
      *
-     * {{X}}, {{Y}}, {{Z}}
+     * {{x}}, {{y}}, {{z}}, {{p}}
+     *
+     * where x and y are the coordinates, z the zoom level and p the random
+     * prefix.
      *
      * @param {string} urlPattern
      * @returns {string} Url.
