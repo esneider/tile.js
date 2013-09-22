@@ -217,29 +217,28 @@ var Tile = (function() {
      * });
      * var g = new GoogleTile(2, 2, 2);
      *
-     * @param {object}    opts
-     * @param {string}   [opts.urlPattern='']
-     * @param {string[]} [opts.urlPrefixes=['']]
-     * @param {string}   [opts.coordType='wmts']
+     * @param {object}    param  Extra tile parameters.
+     * @param {string}   [param.urlPattern='']  Pattern for url building.
+     * @param {string[]} [param.urlPrefixes=['']]  Possible url prefixes.
+     * @param {string}   [param.coordType='wmts']  Can be 'wmts', 'google' or 'tms'.
+     * @returns {function} New tile constructor.
      */
-    Tile.extend = function(opts) {
+    Tile.extend = function(param) {
 
-        var paren = this;
-
-        function Tile() { paren.apply(this, arguments); };
+        function Tile() { this.constructor.apply(this, arguments); }
 
         initializing = true;
         Tile.prototype = new this();
         initializing = false;
 
         extend(Tile.prototype, this.prototype);
-        extend(Tile.prototype, opts);
+        extend(Tile.prototype, param);
 
         return Tile;
     };
 
     /**
-     * Default parameters
+     * Default parameters.
      */
     Tile.prototype.coordType = 'wmts';
     Tile.prototype.urlPrefixes = [''];
@@ -256,6 +255,7 @@ var Tile = (function() {
      * prefix.
      *
      * @param {string} urlPattern
+     * @param {string[]} urlPrefixes
      * @returns {string} Url.
      */
     Tile.prototype.toUrl = function(urlPattern, urlPrefixes) {
