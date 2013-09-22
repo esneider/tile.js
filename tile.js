@@ -194,6 +194,20 @@ var Tile = (function() {
     };
 
     /**
+     * TODO
+     */
+    function extend(target, source) {
+
+        for (var attr in source) {
+            if (source.hasOwnProperty(attr)) {
+                target[attr] = source[attr];
+            }
+        }
+    }
+
+    /**
+     * Create a specialized constructor for Tile.
+     *
      * @example
      *
      * GoogleTile = Tile.extend({
@@ -201,6 +215,7 @@ var Tile = (function() {
      *     urlPrefixes: ['0','1','2','3'],
      *     coordType: 'google'
      * });
+     * var g = new GoogleTile(2, 2, 2);
      *
      * @param {object}    opts
      * @param {string}   [opts.urlPattern='']
@@ -217,17 +232,8 @@ var Tile = (function() {
         Tile.prototype = new this();
         initializing = false;
 
-        for (var attr in this.prototype) {
-            if (this.prototype.hasOwnProperty(attr)) {
-                Tile.prototype[attr] = this.prototype[attr];
-            }
-        }
-
-        for (var attr in opts) {
-            if (opts.hasOwnProperty(attr)) {
-                Tile.prototype[attr] = opts[attr];
-            }
-        }
+        extend(Tile.prototype, this.prototype);
+        extend(Tile.prototype, opts);
 
         return Tile;
     };
@@ -338,7 +344,7 @@ var Tile = (function() {
     };
 
     /**
-     *
+     * TODO
      */
     Tile.prototype.fetch = function(urlPattern, callback, opts) {
 
@@ -389,7 +395,7 @@ var Tile = (function() {
     };
 
     /**
-     *
+     * TODO
      */
     Tile.prototype.abort = function() {
 
