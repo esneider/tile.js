@@ -23,11 +23,17 @@ var Tile = (function() {
      *
      * @param {number} y - Old y coordinate.
      * @param {number} z - Zoom level.
+     * @param {string} type - Tile type.
      * @return {number} New y coordinate.
      */
-    function switchTms(y, z) {
+    function switchTms(y, z, type) {
 
-        return (1 << z) - y - 1;
+        if (type === 'tms') {
+
+            y = (1 << z) - y - 1;
+        }
+
+        return y;
     }
 
     /**
@@ -47,13 +53,8 @@ var Tile = (function() {
         if (initializing) { return; }
 
         this.x = x || 0;
-        this.y = y || 0;
+        this.y = switchTms(y || 0, z, this.type);
         this.z = z || 0;
-
-        if (this.type === 'tms') {
-
-            this.y = switchTms(this.y, this.z);
-        }
 
         var dif;
 
@@ -239,7 +240,7 @@ var Tile = (function() {
      * @param {number} [param.size=256] - Size of tile side. Tiles are square.
      * @param {string} [param.type='wmts'] - {@link Tile#type}
      * @param {string} [param.urlPattern=''] - Pattern for url building.
-     * @param {string[]} [param.urlPrefixes=['']] - List of possible url sub-domains.
+     * @param {string[]} [param.urlPrefixes=['']] - List of possible url subdomains.
      * @returns {function} New tile constructor.
      *
      * @example
@@ -391,15 +392,15 @@ var Tile = (function() {
         urlPattern  = urlPattern  || this.urlPattern;
         urlPrefixes = urlPrefixes || this.urlPrefixes;
 
-        var tile = this;
+        var tile = this, random = Math.random();
 
         return urlPattern.replace(replacePattern, function(match, par) {
 
             switch (par.toLowerCase()) {
                 case 'x': return tile.x;
-                case 'y': return tile.type === 'tms' ? switchTms(tile.y, tile.z) : tile.y;
+                case 'y': return switchTms(tile.y, tile.z, tile.type);
                 case 'z': return tile.z;
-                case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
+                case 'p': return urlPrefixes[~~(random * urlPrefixes.length)];
             }
         });
     };
