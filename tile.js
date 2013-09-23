@@ -397,7 +397,7 @@ var Tile = (function() {
 
             switch (par.toLowerCase()) {
                 case 'x': return tile.x;
-                case 'y': return tile.y;
+                case 'y': return tile.type === 'tms' ? switchTms(tile.y, tile.z) : tile.y;
                 case 'z': return tile.z;
                 case 'p': return urlPrefixes[Math.floor(Math.random() * urlPrefixes.length)];
             }
