@@ -37,6 +37,19 @@ var Tile = (function() {
     }
 
     /**
+     * Trim a number if it's outside a given range.
+     *
+     * @param {number} n - Number to trim.
+     * @param {number} min - Minimum possible value, included.
+     * @param {number} max - Maximum possible value, included.
+     * @returns {number} Trimmed number.
+     */
+    function trim(n, min, max) {
+
+        return n < min ? min : (n > max ? max : n);
+    }
+
+    /**
      * Create a new tile, which is determined by the coordinates x, y and the
      * zoom level z. If no coordinates are given, it defaults to
      * <code>Tile(0, 0, 0)</code>. The supported tile formats are:
@@ -59,9 +72,9 @@ var Tile = (function() {
 
         if (initializing) { return; }
 
-        this.x = x || 0;
-        this.y = switchTms(y || 0, z, this.format);
         this.z = z || 0;
+        this.x = trim(x || 0, 0, (1 << z) - 1);
+        this.y = trim(switchTms(y || 0, z, this.format), 0, (1 << z) - 1);
 
         var dif;
 
@@ -165,19 +178,6 @@ var Tile = (function() {
     };
 
     /**
-     * Trim a number if it's outside a given range.
-     *
-     * @param {number} n - Number to trim.
-     * @param {number} min - Minimum possible value, included.
-     * @param {number} max - Maximum possible value, included.
-     * @returns {number} Trimmed number.
-     */
-    function trim(n, min, max) {
-
-        return n < min ? min : (n > max ? max : n);
-    }
-
-    /**
      * Create a new tile from geodetic coordinates (latitude and longitude in
      * degrees). The geodetic coordinates are expected to use the WGS84 datum.
      *
@@ -199,8 +199,8 @@ var Tile = (function() {
 
         var size = this.prototype.size << z;
 
-        x = ~~(trim(x * size + 0.5, 0, size - 1) / this.prototype.size);
-        y = ~~(trim(y * size + 0.5, 0, size - 1) / this.prototype.size);
+        x = ~~(trim(x * size /* + 0.5 */, 0, size - 1) / this.prototype.size);
+        y = ~~(trim(y * size /* + 0.5 */, 0, size - 1) / this.prototype.size);
 
         return new this(x, y, z);
     };
@@ -276,6 +276,9 @@ var Tile = (function() {
         return Tile;
     };
 
+    /**
+     * Tile properties
+     */
     Tile.prototype.format = 'wmts';
 
     Tile.prototype.urlPattern = '';
