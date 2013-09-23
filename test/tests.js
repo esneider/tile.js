@@ -1,11 +1,8 @@
 // Constants
-var x = 5;
-var y = 6;
-var z = 7;
 
 test('Constructor', function() {
 
-    var t;
+    var x = 5, y = 6, z = 7, t, T;
 
     t = new Tile();
     ok(t.x === 0, 'Default value');
@@ -17,27 +14,35 @@ test('Constructor', function() {
     ok(t.y === y, 'Initialization');
     ok(t.z === z, 'Initialization');
 
-    deepEqual(new Tile(x, y, z), new Tile(x, y, z, 'wmts'), 'Default type');
-    deepEqual(new Tile(x, y, z), new Tile(x, y, z, 'google'), 'Default type');
-    notDeepEqual(new Tile(x, y, z), new Tile(x, y, z, 'tms'), 'Default type');
+    T = Tile.extend({type: 'wmts'});
+    ok(t.equals(new T(x, y, z)), 'Default type');
 
-    t = new Tile(x, y, z, 'tms');
+    T = Tile.extend({type: 'google'});
+    ok(t.equals(new T(x, y, z)), 'Default type');
+
+    T = Tile.extend({type: 'tms'});
     t.y = (1 << t.z) - t.y - 1;
-    deepEqual(t, new Tile(x, y, z), 'TMS type');
+    ok(t.equals(new T(x, y, z)), 'TMS type');
+
+    T = Tile.extend({minZ: 5, maxZ: 10});
+    t = new Tile(0, 0, 5);
+    ok(t.equals(new T(0, 0, 4)), 'Minimum Z');
+    t = new Tile(0, 0, 10);
+    ok(t.equals(new T(0, 0, 11)), 'Maximum Z');
 });
 
 test('URL constructor', function() {
 
-    var t, f;
+    var t, f, T;
 
     t = Tile.fromUrl('http://mw1.google.com/mw-planetary/lunar/lunarmaps_v1/clem_bw/9/321/121.jpg');
     deepEqual(t, new Tile(321, 121, 9), 'Slash pattern');
 
-    t = Tile.fromUrl('http://mt1.google.com/vt/lyrs=m@129&hl=en&x=213&y=230&z=10&s=Galileo');
+    t = Tile.fromUrl('http://mt1.google.com/vt/x=213&y=230&z=10');
     deepEqual(t, new Tile(213, 230, 10), 'Param pattern');
-    t = Tile.fromUrl('http://mt1.google.com/vt/lyrs=m@129&hl=en&y=230&z=10&x=213&s=Galileo');
+    t = Tile.fromUrl('http://mt1.google.com/vt/y=230&z=10&x=213');
     deepEqual(t, new Tile(213, 230, 10), 'Param pattern (shuffle)');
-    f = function() { Tile.fromUrl('http://mt1.google.com/vt/lyrs=m@129&hl=en&x=230&z=10&x=213&s=Galileo'); };
+    f = function() { Tile.fromUrl('http://mt1.google.com/vt/x=230&z=10&x=213'); };
     throws(f, 'Invalid url (param pattern: has no z)');
 
     t = Tile.fromUrl('http://domain.com/myimage_11_543_234.png');
@@ -52,8 +57,9 @@ test('URL constructor', function() {
     f = function() { Tile.fromUrl('http://www.google.com/search?aqs=69i57j69i60l3j69i65l2.699j0'); };
     throws(f, 'Invalid url (numeric)');
 
-    t = Tile.fromUrl('http://mw1.google.com/mw-planetary/lunar/lunarmaps_v1/clem_bw/9/321/121.jpg', 'tms');
-    deepEqual(t, new Tile(321, (1 << 9) - 122, 9), 'TMS type');
+    T = Tile.extend({type: 'tms'});
+    t = T.fromUrl('http://mw1.google.com/mw-planetary/lunar/lunarmaps_v1/clem_bw/9/321/121.jpg');
+    ok(t.equals(new Tile(321, (1 << 9) - 122, 9)), 'TMS type');
 });
 
 test('QuadKey constructor', function() {
@@ -69,6 +75,12 @@ test('QuadKey constructor', function() {
     throws(f, 'Invalid tile path');
     f = function() { Tile.fromQuadKey('213123@'); };
     throws(f, 'Invalid tile path');
+
+    T = Tile.extend({minZ: 5, maxZ: 10});
+    t = T.fromQuadKey('02301020333');
+    ok(t.equals(Tile.fromQuadKey('0230102033')), 'Minimum Z');
+    t = T.fromQuadKey('0230');
+    ok(t.equals(Tile.fromQuadKey('02300')), 'Maximum Z');
 });
 
 test('LatLon constructor', function() {
