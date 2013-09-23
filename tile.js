@@ -23,12 +23,12 @@ var Tile = (function() {
      *
      * @param {number} y - Old y coordinate.
      * @param {number} z - Zoom level.
-     * @param {string} type - Tile type.
+     * @param {string} format - Tile format.
      * @return {number} New y coordinate.
      */
-    function switchTms(y, z, type) {
+    function switchTms(y, z, format) {
 
-        if (type === 'tms') {
+        if (format === 'tms') {
 
             y = (1 << z) - y - 1;
         }
@@ -38,8 +38,15 @@ var Tile = (function() {
 
     /**
      * Create a new tile, which is determined by the coordinates x, y and the
-     * zoom level z.
-     * If no coordinates are given, it defaults to <code>Tile(0, 0, 0)</code>.
+     * zoom level z. If no coordinates are given, it defaults to
+     * <code>Tile(0, 0, 0)</code>. The supported tile formats are:
+     * <pre>
+     * - ['wmts']{@link http://bit.ly/b5fn2j}
+     * - ['google']{@link http://bit.ly/18xaPQy}
+     * - ['tms']{@link http://bit.ly/17IFF5X}
+     * </pre>
+     * 'wmts' and 'google' are exactly the same. 'tms' differs just in where
+     * the 0 for the y coordinate is.
      *
      * @name Tile
      * @constructor
@@ -53,7 +60,7 @@ var Tile = (function() {
         if (initializing) { return; }
 
         this.x = x || 0;
-        this.y = switchTms(y || 0, z, this.type);
+        this.y = switchTms(y || 0, z, this.format);
         this.z = z || 0;
 
         var dif;
@@ -237,17 +244,17 @@ var Tile = (function() {
      * @param {object}  param
      * @param {number} [param.minZ=0] - Minimum zoom level (inclusive).
      * @param {number} [param.maxZ=23] - Maximum zoom level (inclusive).
-     * @param {number} [param.size=256] - Size of tile side. Tiles are square.
-     * @param {string} [param.type='wmts'] - {@link Tile#type}
+     * @param {number} [param.size=256] - Size of (square) tile side.
+     * @param {string} [param.format='wmts'] - See {@link Tile} documentation.
      * @param {string} [param.urlPattern=''] - Pattern for url building.
-     * @param {string[]} [param.urlPrefixes=['']] - List of possible url subdomains.
+     * @param {string[]} [param.urlPrefixes=['']] - Possible url subdomains.
      * @returns {function} New tile constructor.
      *
      * @example
      * GoogleTile = Tile.extend({
      *     urlPattern: 'http://mt{{p}}.google.com/vt/x={{x}}&y={{y}}&z={{z}}',
      *     urlPrefixes: ['0','1','2','3'],
-     *     type: 'google'
+     *     format: 'google'
      * });
      * var g = new GoogleTile(2, 2, 2);
      */
@@ -269,34 +276,16 @@ var Tile = (function() {
         return Tile;
     };
 
-    /**
-     * The coordinate type determines the scheme used for labeling the tiles.
-     *
-     * The supported types are
-     *   ['wmts']{@link http://bit.ly/b5fn2j},
-     * ['google']{@link http://bit.ly/18xaPQy} and
-     *    ['tms']{@link http://bit.ly/17IFF5X}.
-     *
-     * 'wmts' and 'google' are exactly the same; 'tms' differs just in where
-     * the 0 for the y coordinate is.
-     *
-     * @private
-     */
-    Tile.prototype.type = 'wmts';
+    Tile.prototype.format = 'wmts';
 
-    /** @private */
     Tile.prototype.urlPattern = '';
 
-    /** @private */
     Tile.prototype.urlPrefixes = [''];
 
-    /** @private */
     Tile.prototype.size = 256;
 
-    /** @private */
     Tile.prototype.minZ = 0;
 
-    /** @private */
     Tile.prototype.maxZ = 23;
 
     /**
@@ -398,7 +387,7 @@ var Tile = (function() {
 
             switch (par.toLowerCase()) {
                 case 'x': return tile.x;
-                case 'y': return switchTms(tile.y, tile.z, tile.type);
+                case 'y': return switchTms(tile.y, tile.z, tile.format);
                 case 'z': return tile.z;
                 case 'p': return urlPrefixes[~~(random * urlPrefixes.length)];
             }
@@ -499,7 +488,7 @@ var Tile = (function() {
                         break;
                     default:
                         if (opts.retries) {
-                            this.get(xmlCallback, urlPattern, type, opts.retries - 1);
+                            this.get(xmlCallback, urlPattern, format, opts.retries - 1);
                         } else {
                             xmlCallback(null);
                         }
@@ -508,7 +497,7 @@ var Tile = (function() {
             }
         };
 
-        xhr.open('GET', this.toUrl(urlPattern, type), true);
+        xhr.open('GET', this.toUrl(urlPattern, format), true);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.send(null);
     };

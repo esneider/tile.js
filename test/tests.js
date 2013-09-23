@@ -14,15 +14,15 @@ test('Constructor', function() {
     ok(t.y === y, 'Initialization');
     ok(t.z === z, 'Initialization');
 
-    T = Tile.extend({type: 'wmts'});
-    ok(t.equals(new T(x, y, z)), 'Default type');
+    T = Tile.extend({format: 'wmts'});
+    ok(t.equals(new T(x, y, z)), 'Default format');
 
-    T = Tile.extend({type: 'google'});
-    ok(t.equals(new T(x, y, z)), 'Default type');
+    T = Tile.extend({format: 'google'});
+    ok(t.equals(new T(x, y, z)), 'Default format');
 
-    T = Tile.extend({type: 'tms'});
+    T = Tile.extend({format: 'tms'});
     t.y = (1 << t.z) - t.y - 1;
-    ok(t.equals(new T(x, y, z)), 'TMS type');
+    ok(t.equals(new T(x, y, z)), 'TMS format');
 
     T = Tile.extend({minZ: 5, maxZ: 10});
     t = new Tile(0, 0, 5);
@@ -57,9 +57,9 @@ test('URL constructor', function() {
     f = function() { Tile.fromUrl('http://www.google.com/search?aqs=69i57j69i60l3j69i65l2.699j0'); };
     throws(f, 'Invalid url (numeric)');
 
-    T = Tile.extend({type: 'tms'});
+    T = Tile.extend({format: 'tms'});
     t = T.fromUrl('http://mw1.google.com/mw-planetary/lunar/lunarmaps_v1/clem_bw/9/321/121.jpg');
-    ok(t.equals(new Tile(321, (1 << 9) - 122, 9)), 'TMS type');
+    ok(t.equals(new Tile(321, (1 << 9) - 122, 9)), 'TMS format');
 });
 
 test('QuadKey constructor', function() {
