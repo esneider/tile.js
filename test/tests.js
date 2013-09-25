@@ -1,6 +1,6 @@
 // Constants
 
-test('Constructor', function() {
+test('XYZ constructor', function() {
 
     var t, T;
 
@@ -27,6 +27,8 @@ test('Constructor', function() {
     T = Tile.extend({format: 'tms'});
     t.y = (1 << t.z) - t.y - 1;
     ok(t.equals(new T(x, y, z)), 'TMS format');
+    t = new Tile();
+    ok(t.equals(new T()), 'TMS default coords');
 
     T = Tile.extend({minZ: 5, maxZ: 10});
     t = new Tile(0, 0, 5);

@@ -73,8 +73,11 @@ var Tile = (function() {
         if (initializing) { return; }
 
         this.z = z || 0;
-        this.x = trim(x || 0, 0, (1 << z) - 1);
-        this.y = trim(switchTms(y || 0, z, this.format), 0, (1 << z) - 1);
+        this.x = x || 0;
+        this.y = y && switchTms(y, this.z, this.format) || 0;
+
+        this.x = trim(this.x, 0, (1 << this.z) - 1);
+        this.y = trim(this.y, 0, (1 << this.z) - 1);
 
         var dif;
 
