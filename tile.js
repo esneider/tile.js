@@ -14,10 +14,6 @@ var Tile = (function() {
     var minLongitude = -180;
     var maxLongitude = 180;
 
-    var initializing = false;
-    var xhr = null;
-    var xmlCallback = null;
-
     /**
      * Switch between TMS and WMTS y coordinates.
      *
@@ -69,8 +65,6 @@ var Tile = (function() {
      * @param {number} z - Zoom level.
      */
     function Tile(x, y, z) {
-
-        if (initializing) { return; }
 
         this.z = z || 0;
         this.x = x || 0;
@@ -266,10 +260,7 @@ var Tile = (function() {
         var _super = this;
         function Tile() { _super.apply(this, arguments); }
 
-        initializing = true;
         Tile.prototype = new this();
-        initializing = false;
-
         Tile.prototype.constructor = Tile;
 
         extend(Tile, this);
@@ -454,69 +445,6 @@ var Tile = (function() {
         return this.x === tile.x &&
                this.y === tile.y &&
                this.z === tile.z;
-    };
-
-    /**
-     * TODO
-     */
-    /*
-    Tile.prototype.fetch = function(urlPattern, callback, opts) {
-
-        if (!('retries' in opts)) { opts.retries = 3; }
-        if (!('timeout' in opts)) { opts.timeout = 3000; }
-
-        if (xhr !== null && xhr.readyState < 4) {
-
-            xmlCallback = function() {
-                xmlCallback.apply(arguments);
-                callback.apply(arguments);
-            };
-
-            return;
-        }
-
-        xmlCallback = callback;
-
-        xhr = new XMLHttpRequest();
-
-        xhr.onreadystatechange = function() {
-
-            if (xhr.readyState === 4) {
-
-                switch (~~(xhr.status / 100)) {
-                    case 1:
-                    case 2:
-                        xmlCallback(xhr.response);
-                        break;
-                    case 3:
-                    case 4:
-                        xmlCallback(null);
-                        break;
-                    default:
-                        if (opts.retries) {
-                            this.get(xmlCallback, urlPattern, format, opts.retries - 1);
-                        } else {
-                            xmlCallback(null);
-                        }
-                        break;
-                }
-            }
-        };
-
-        xhr.open('GET', this.toUrl(urlPattern, format), true);
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.send(null);
-    };
-    */
-
-    /**
-     * TODO
-     */
-    Tile.prototype.abort = function() {
-
-        if (xhr) {
-            xhr.abort();
-        }
     };
 
     return Tile;
