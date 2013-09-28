@@ -14,6 +14,15 @@ var Tile = (function() {
     var minLongitude = -180;
     var maxLongitude = 180;
 
+    var defaultParams = {
+        format: 'wmts',
+        urlPattern: '',
+        urlPrefixes: [''],
+        size: 256,
+        minZ: 0,
+        maxZ: 23
+    };
+
     /**
      * Switch between TMS and WMTS y coordinates.
      *
@@ -33,22 +42,21 @@ var Tile = (function() {
     }
 
     /**
-     * Trim a number if it's outside a given range.
+     * Limit a number to a specific range range.
      *
      * @param {number} n - Number to trim.
      * @param {number} min - Minimum possible value, included.
      * @param {number} max - Maximum possible value, included.
      * @returns {number} Trimmed number.
      */
-    function trim(n, min, max) {
+    function rangeLimit(n, min, max) {
 
         return n < min ? min : (n > max ? max : n);
     }
 
     /**
-     * Create a new tile, which is determined by the coordinates x, y and the
-     * zoom level z. If no coordinates are given, it defaults to
-     * <code>Tile(0, 0, 0)</code>. The supported tile formats are:
+     * Create a new tile.
+     * The supported tile formats are:
      * <pre>
      * - ['wmts']{@link http://bit.ly/b5fn2j}
      * - ['google']{@link http://bit.ly/18xaPQy}
@@ -59,38 +67,75 @@ var Tile = (function() {
      *
      * @name Tile
      * @constructor
+     * @throws {Error} Invalid parameters.
+     */
+    function Tile() {
+
+        switch (arguments.length) {
+
+            case 0:
+                this.x = this.y = this.z = 0;
+                return;
+
+            case 1:
+                Tile.fromUrl.apply(this, arguments);
+                return;
+
+            case 2:
+                Tile.fromLatLon.apply(this, arguments);
+                return;
+
+            case 3:
+                Tile.fromXYZ.apply(this, arguments);
+                return;
+
+            default:
+                throw new Error('Invalid parameters');
+        }
+    }
+
+    /**
+     * Create a new tile, which is determined by the coordinates x, y and the
+     * zoom level z.
+     *
+     * @memberof Tile
      *
      * @param {number} x - Coordinate.
      * @param {number} y - Coordinate.
      * @param {number} z - Zoom level.
      */
-    function Tile(x, y, z) {
+    Tile.fromXYZ = function(x, y, z) {
 
-        this.z = z || 0;
-        this.x = x || 0;
-        this.y = y && switchTms(y, this.z, this.format) || 0;
-
-        this.x = trim(this.x, 0, (1 << this.z) - 1);
-        this.y = trim(this.y, 0, (1 << this.z) - 1);
+        y = switchTms(y, z, this.format);
+        x = rangeLimit(x, 0, (1 << z) - 1);
+        y = rangeLimit(y, 0, (1 << z) - 1);
 
         var dif;
 
-        if (this.z < this.minZ) {
+        if (z < this.minZ) {
 
-            dif = this.minZ - this.z;
-            this.x <<= dif;
-            this.y <<= dif;
-            this.z += dif;
+            dif = this.minZ - z;
+            x <<= dif;
+            y <<= dif;
+            z += dif;
         }
 
-        if (this.z > this.maxZ) {
+        if (z > this.maxZ) {
 
-            dif = this.z - this.maxZ;
-            this.x >>= dif;
-            this.y >>= dif;
-            this.z -= dif;
+            dif = z - this.maxZ;
+            x >>= dif;
+            y >>= dif;
+            z -= dif;
         }
-    }
+
+        var tile = this instanceof Tile ? this : new this();
+
+        tile.x = x;
+        tile.y = y;
+        tile.z = z;
+
+        return tile;
+    };
 
     /**
      * Create a new tile from string parameters.
@@ -100,13 +145,13 @@ var Tile = (function() {
      * @param {string} z - Zoom level.
      * @returns {Tile} New tile.
      */
-    function tileFromStrings(Tile, x, y, z) {
+    function tileFromStrings(This, x, y, z) {
 
         x = parseInt(x, 10);
         y = parseInt(y, 10);
         z = parseInt(z, 10);
 
-        return new Tile(x, y, z);
+        return Tile.fromXYZ.call(This, x, y, z);
     }
 
     /**
@@ -117,7 +162,6 @@ var Tile = (function() {
      *
      * @param {string} url - Url for the tile.
      * @returns {Tile} New tile.
-     *
      * @throws {Error} Invalid url.
      */
     Tile.fromUrl = function(url) {
@@ -162,7 +206,6 @@ var Tile = (function() {
      *
      * @param {string} key - Base-4 number.
      * @returns {Tile} New tile.
-     *
      * @throws {Error} Invalid tile path.
      */
     Tile.fromQuadKey = function(key) {
@@ -187,19 +230,19 @@ var Tile = (function() {
      */
     Tile.fromLatLon = function(lat, lon, z) {
 
-        lat = trim(lat, minLatitude, maxLatitude);
-        lon = trim(lon, minLongitude, maxLongitude);
+        lat = rangeLimit(lat, minLatitude, maxLatitude);
+        lon = rangeLimit(lon, minLongitude, maxLongitude);
 
         var x = (lon + 180) / 360;
         var s = Math.sin(lat * Math.PI / 180);
         var y = 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI);
 
-        var size = this.prototype.size << z;
+        var size = this.size << z;
 
-        x = ~~(trim(x * size /* + 0.5 */, 0, size - 1) / this.prototype.size);
-        y = ~~(trim(y * size /* + 0.5 */, 0, size - 1) / this.prototype.size);
+        x = ~~(rangeLimit(x * size /* + 0.5 */, 0, size - 1) / this.size);
+        y = ~~(rangeLimit(y * size /* + 0.5 */, 0, size - 1) / this.size);
 
-        return new this(x, y, z);
+        return Tile.fromXYZ.call(this, x, y, z);
     };
 
     /**
@@ -214,8 +257,10 @@ var Tile = (function() {
      */
     Tile.fromPixel = function(x, y, z) {
 
-        var size = this.prototype.size;
-        return new this((x * size) >> z, (y * size) >> z, z);
+        x = (x * this.size) >> z;
+        y = (y * this.size) >> z;
+
+        return Tile.fromXYZ.call(this, x, y, z);
     };
 
     /**
@@ -264,26 +309,12 @@ var Tile = (function() {
         Tile.prototype.constructor = Tile;
 
         extend(Tile, this);
+        extend(Tile, param);
         extend(Tile.prototype, this.prototype);
         extend(Tile.prototype, param);
 
         return Tile;
     };
-
-    /**
-     * Tile properties
-     */
-    Tile.prototype.format = 'wmts';
-
-    Tile.prototype.urlPattern = '';
-
-    Tile.prototype.urlPrefixes = [''];
-
-    Tile.prototype.size = 256;
-
-    Tile.prototype.minZ = 0;
-
-    Tile.prototype.maxZ = 23;
 
     /**
      * Return a tile containing this one (lower zoom level).
@@ -325,7 +356,6 @@ var Tile = (function() {
      *
      * @param {string} path - Base-4 number.
      * @returns {Tile} New tile.
-     *
      * @throws {Error} Invalid tile path.
      */
     Tile.prototype.descendant = function(path) {
@@ -393,7 +423,7 @@ var Tile = (function() {
 
     /**
      * Return the x, y coordinates in the current zoom plane corresponding to a
-     * givel tile pixel.
+     * given tile pixel.
      *
      * @memberof Tile
      *
@@ -422,8 +452,8 @@ var Tile = (function() {
 
         var size = this.size << this.z;
 
-        x = trim(x + (this.x * this.size), 0, size - 1) / size - 0.5;
-        y = 0.5 - trim(y + (this.y * this.size), 0, size - 1) / size;
+        x = rangeLimit(x + (this.x * this.size), 0, size - 1) / size - 0.5;
+        y = 0.5 - rangeLimit(y + (this.y * this.size), 0, size - 1) / size;
 
         var lat = 90 - 360 * Math.atan(Math.exp(-y * 2 * Math.PI)) / Math.PI;
         var lon = 360 * x;
@@ -446,6 +476,9 @@ var Tile = (function() {
                this.y === tile.y &&
                this.z === tile.z;
     };
+
+    extend(Tile, defaultParams);
+    extend(Tile.prototype, defaultParams);
 
     return Tile;
 }());

@@ -4,37 +4,30 @@ test('XYZ constructor', function() {
 
     var t, T;
 
-    t = new Tile();
-    ok(t.x === 0, 'Default value');
-    ok(t.y === 0, 'Default value');
-    ok(t.z === 0, 'Default value');
-
     var x = 5;
     var y = 6;
     var z = 7;
 
-    t = new Tile(x, y, z);
+    t = Tile.fromXYZ(x, y, z);
     ok(t.x === x, 'Initialization');
     ok(t.y === y, 'Initialization');
     ok(t.z === z, 'Initialization');
 
     T = Tile.extend({format: 'wmts'});
-    ok(t.equals(new T(x, y, z)), 'Default format');
+    ok(t.equals(T.fromXYZ(x, y, z)), 'Default format');
 
     T = Tile.extend({format: 'google'});
-    ok(t.equals(new T(x, y, z)), 'Default format');
+    ok(t.equals(T.fromXYZ(x, y, z)), 'Default format');
 
     T = Tile.extend({format: 'tms'});
     t.y = (1 << t.z) - t.y - 1;
-    ok(t.equals(new T(x, y, z)), 'TMS format');
-    t = new Tile();
-    ok(t.equals(new T()), 'TMS default coords');
+    ok(t.equals(T.fromXYZ(x, y, z)), 'TMS format');
 
     T = Tile.extend({minZ: 5, maxZ: 10});
-    t = new Tile(0, 0, 5);
-    ok(t.equals(new T(0, 0, 4)), 'Minimum Z');
-    t = new Tile(0, 0, 10);
-    ok(t.equals(new T(0, 0, 11)), 'Maximum Z');
+    t = Tile.fromXYZ(0, 0, 5);
+    ok(t.equals(T.fromXYZ(0, 0, 4)), 'Minimum Z');
+    t = Tile.fromXYZ(0, 0, 10);
+    ok(t.equals(T.fromXYZ(0, 0, 11)), 'Maximum Z');
 });
 
 test('URL constructor', function() {
